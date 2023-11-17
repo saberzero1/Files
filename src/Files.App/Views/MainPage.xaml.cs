@@ -23,18 +23,14 @@ namespace Files.App.Views
 {
 	public sealed partial class MainPage : Page, INotifyPropertyChanged
 	{
-		public IUserSettingsService UserSettingsService { get; }
-		public IApplicationService ApplicationService { get; }
+		// Dependency injection
 
-		public ICommandManager Commands { get; }
-
-		public IWindowContext WindowContext { get; }
-
-		public SidebarViewModel SidebarAdaptiveViewModel { get; }
-
-		public MainPageViewModel ViewModel { get; }
-
-		public StatusCenterViewModel OngoingTasksViewModel { get; }
+		private IUserSettingsService UserSettingsService { get; } = Ioc.Default.GetRequiredService<IUserSettingsService>();
+		private IApplicationService ApplicationService { get; } = Ioc.Default.GetRequiredService<IApplicationService>();
+		private ICommandManager Commands { get; } = Ioc.Default.GetRequiredService<ICommandManager>();
+		private IWindowContext WindowContext { get; } = Ioc.Default.GetRequiredService<IWindowContext>();
+		private SidebarViewModel SidebarAdaptiveViewModel { get; } = Ioc.Default.GetRequiredService<SidebarViewModel>();
+		private MainPageViewModel ViewModel { get; } = Ioc.Default.GetRequiredService<MainPageViewModel>();
 
 		public static AppModel AppModel
 			=> App.AppModel;
@@ -49,15 +45,7 @@ namespace Files.App.Views
 		{
 			InitializeComponent();
 
-			// Dependency Injection
-			UserSettingsService = Ioc.Default.GetRequiredService<IUserSettingsService>();
-			ApplicationService = Ioc.Default.GetRequiredService<IApplicationService>();
-			Commands = Ioc.Default.GetRequiredService<ICommandManager>();
-			WindowContext = Ioc.Default.GetRequiredService<IWindowContext>();
-			SidebarAdaptiveViewModel = Ioc.Default.GetRequiredService<SidebarViewModel>();
 			SidebarAdaptiveViewModel.PaneFlyout = (MenuFlyout)Resources["SidebarContextMenu"];
-			ViewModel = Ioc.Default.GetRequiredService<MainPageViewModel>();
-			OngoingTasksViewModel = Ioc.Default.GetRequiredService<StatusCenterViewModel>();
 
 			if (FilePropertiesHelpers.FlowDirectionSettingIsRightToLeft)
 				FlowDirection = FlowDirection.RightToLeft;
@@ -114,15 +102,6 @@ namespace Files.App.Views
 
 			if (result == ContentDialogResult.Secondary)
 				UserSettingsService.ApplicationSettingsService.ShowRunningAsAdminPrompt = false;
-		}
-
-		// WINUI3
-		private ContentDialog SetContentDialogRoot(ContentDialog contentDialog)
-		{
-			if (Windows.Foundation.Metadata.ApiInformation.IsApiContractPresent("Windows.Foundation.UniversalApiContract", 8))
-				contentDialog.XamlRoot = MainWindow.Instance.Content.XamlRoot;
-
-			return contentDialog;
 		}
 
 		private void UserSettingsService_OnSettingChangedEvent(object? sender, SettingChangedEventArgs e)
@@ -432,8 +411,6 @@ namespace Files.App.Views
 			this.ChangeCursor(InputSystemCursor.Create(InputSystemCursorShape.Arrow));
 		}
 
-		public bool ShouldViewControlBeDisplayed => SidebarAdaptiveViewModel.PaneHolder?.ActivePane?.InstanceViewModel?.IsPageTypeNotHome ?? false;
-
 		public bool ShouldPreviewPaneBeActive => UserSettingsService.InfoPaneSettingsService.IsEnabled && ShouldPreviewPaneBeDisplayed;
 
 		public bool ShouldPreviewPaneBeDisplayed
@@ -451,7 +428,6 @@ namespace Files.App.Views
 
 		private void LoadPaneChanged()
 		{
-			OnPropertyChanged(nameof(ShouldViewControlBeDisplayed));
 			OnPropertyChanged(nameof(ShouldPreviewPaneBeActive));
 			OnPropertyChanged(nameof(ShouldPreviewPaneBeDisplayed));
 			UpdatePositioning();
