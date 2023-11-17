@@ -3,7 +3,6 @@
 
 using CommunityToolkit.WinUI.UI;
 using Files.Shared.Helpers;
-using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -223,6 +222,16 @@ namespace Files.App.ViewModels.UserControls
 			set => SetProperty(ref _PathControlDisplayText, value);
 		}
 
+		/// <summary>
+		/// Used to hide the selection, sort, & layout toolbar buttons on the home page
+		/// </summary>
+		public bool _IsRightToolbarVisible = false;
+		public bool IsRightToolbarVisible
+		{
+			get => _IsRightToolbarVisible;
+			set => SetProperty(ref _IsRightToolbarVisible, value);
+		}
+
 		// Auto properties
 
 		public ObservableCollection<NavigationBarSuggestionItem> NavigationBarSuggestions { get; } = new();
@@ -302,9 +311,22 @@ namespace Files.App.ViewModels.UserControls
 			RefreshClickCommand = new RelayCommand<RoutedEventArgs>(e => RefreshRequested?.Invoke(this, EventArgs.Empty));
 			UpdateCommand = new AsyncRelayCommand(UpdateService.DownloadUpdatesAsync);
 
+			IsRightToolbarVisible = ContentPageContext.PageType is not ContentPageTypes.Home;
+
 			SearchBox.Escaped += SearchRegion_Escaped;
 			UserSettingsService.OnSettingChangedEvent += UserSettingsService_OnSettingChangedEvent;
 			UpdateService.PropertyChanged += UpdateService_OnPropertyChanged;
+			ContentPageContext.PropertyChanged += ContentPageContext_PropertyChanged;
+		}
+
+		private void ContentPageContext_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+		{
+			switch (e.PropertyName)
+			{
+				case nameof(IContentPageContext.PageType):
+					OnPropertyChanged(nameof(IsRightToolbarVisible));
+					break;
+			}
 		}
 
 		private async void UpdateService_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
