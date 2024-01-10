@@ -17,7 +17,7 @@ namespace Files.App.ViewModels.UserControls
 	/// </summary>
 	public class AddressToolbarViewModel : ObservableObject, IAddressToolbar, IDisposable
 	{
-		// Dependency injection
+		private const int MAX_SUGGESTIONS = 10;
 
 		private IUserSettingsService UserSettingsService { get; } = Ioc.Default.GetRequiredService<IUserSettingsService>();
 		private IContentPageContext ContentPageContext { get; } = Ioc.Default.GetRequiredService<IContentPageContext>();
@@ -26,7 +26,19 @@ namespace Files.App.ViewModels.UserControls
 		private IUpdateService UpdateService { get; } = Ioc.Default.GetRequiredService<IUpdateService>();
 		private ICommandManager Commands { get; } = Ioc.Default.GetRequiredService<ICommandManager>();
 
-		// Event handlers
+		private readonly IDialogService _dialogService = Ioc.Default.GetRequiredService<IDialogService>();
+
+		private readonly DrivesViewModel drivesViewModel = Ioc.Default.GetRequiredService<DrivesViewModel>();
+
+		public IUpdateService UpdateService { get; } = Ioc.Default.GetService<IUpdateService>()!;
+
+		public ICommandManager Commands { get; } = Ioc.Default.GetRequiredService<ICommandManager>();
+
+		public delegate void ToolbarPathItemInvokedEventHandler(object sender, PathNavigationEventArgs e);
+
+		public delegate void ToolbarFlyoutOpenedEventHandler(object sender, ToolbarFlyoutOpenedEventArgs e);
+
+		public delegate void ToolbarPathItemLoadedEventHandler(object sender, ToolbarPathItemLoadedEventArgs e);
 
 		public delegate void AddressBarTextEnteredEventHandler(object sender, AddressBarTextEnteredEventArgs e);
 		public event IAddressToolbar.ToolbarQuerySubmittedEventHandler? PathBoxQuerySubmitted;
@@ -150,8 +162,8 @@ namespace Files.App.ViewModels.UserControls
 
 				if (SetProperty(ref _InstanceViewModel, value) && _InstanceViewModel?.FolderSettings is not null)
 				{
-					FolderSettings_PropertyChanged(this, new PropertyChangedEventArgs(nameof(FolderSettingsViewModel.LayoutMode)));
-					_InstanceViewModel.FolderSettings.PropertyChanged += FolderSettings_PropertyChanged;
+					FolderSettings_PropertyChanged(this, new PropertyChangedEventArgs(nameof(LayoutPreferencesManager.LayoutMode)));
+					instanceViewModel.FolderSettings.PropertyChanged += FolderSettings_PropertyChanged;
 				}
 			}
 		}
@@ -388,6 +400,39 @@ namespace Files.App.ViewModels.UserControls
 			(this as IAddressToolbar).IsEditModeEnabled = false;
 		}
 
+		public void PathBoxItem_PointerPressed(object sender, PointerRoutedEventArgs e)
+		{
+			if (e.Pointer.PointerDeviceType != Microsoft.UI.Input.PointerDeviceType.Mouse)
+				return;
+
+			var ptrPt = e.GetCurrentPoint(AddressToolbar);
+			pointerRoutedEventArgs = ptrPt.Properties.IsMiddleButtonPressed ? e : null;
+		}
+
+		public async Task PathBoxItem_Tapped(object sender, TappedRoutedEventArgs e)
+		{
+			var itemTappedPath = ((sender as TextBlock)?.DataContext as PathBoxItem)?.Path;
+			if (itemTappedPath is null)
+				return;
+
+			if (pointerRoutedEventArgs is not null)
+			{
+				await MainWindow.Instance.DispatcherQueue.EnqueueOrInvokeAsync(async () =>
+				{
+					await NavigationHelpers.AddNewTabByPathAsync(typeof(PaneHolderPage), itemTappedPath);
+				}, DispatcherQueuePriority.Low);
+				e.Handled = true;
+				pointerRoutedEventArgs = null;
+
+				return;
+			}
+
+			ToolbarPathItemInvoked?.Invoke(this, new PathNavigationEventArgs()
+			{
+				ItemPath = itemTappedPath
+			});
+		}
+
 		public void OpenCommandPalette()
 		{
 			PathText = ">";
@@ -437,7 +482,7 @@ namespace Files.App.ViewModels.UserControls
 				{
 					var page = Ioc.Default.GetRequiredService<IContentPageContext>().ShellPage?.SlimContentPage;
 
-					if (page is StandardViewBase svb && svb.IsLoaded)
+					if (page is BaseGroupableLayoutPage svb && svb.IsLoaded)
 						page.ItemManipulationModel.FocusFileList();
 					else
 						AddressToolbar?.Focus(FocusState.Programmatic);
@@ -463,6 +508,88 @@ namespace Files.App.ViewModels.UserControls
 		private void SearchRegion_Escaped(object? sender, ISearchBox searchBox)
 			=> CloseSearchBox(true);
 
+		public IAsyncRelayCommand? OpenNewWindowCommand { get; set; }
+
+		public ICommand? CreateNewFileCommand { get; set; }
+
+		public ICommand? Share { get; set; }
+
+		public ICommand? UpdateCommand { get; set; }
+
+		public async Task SetPathBoxDropDownFlyoutAsync(MenuFlyout flyout, PathBoxItem pathItem, IShellPage shellPage)
+		{
+			var nextPathItemTitle = PathComponents[PathComponents.IndexOf(pathItem) + 1].Title;
+			IList<StorageFolderWithPath>? childFolders = null;
+
+			StorageFolderWithPath folder = await shellPage.FilesystemViewModel.GetFolderWithPathFromPathAsync(pathItem.Path);
+			if (folder is not null)
+				childFolders = (await FilesystemTasks.Wrap(() => folder.GetFoldersWithPathAsync(string.Empty))).Result;
+
+			flyout.Items?.Clear();
+
+			if (childFolders is null || childFolders.Count == 0)
+			{
+				var flyoutItem = new MenuFlyoutItem
+				{
+					Icon = new FontIcon { Glyph = "\uE7BA" },
+					Text = "SubDirectoryAccessDenied".GetLocalizedResource(),
+					//Foreground = (SolidColorBrush)Application.Current.Resources["SystemControlErrorTextForegroundBrush"],
+					FontSize = 12
+				};
+
+				flyout.Items?.Add(flyoutItem);
+
+				return;
+			}
+
+			var boldFontWeight = new FontWeight { Weight = 800 };
+			var normalFontWeight = new FontWeight { Weight = 400 };
+
+			var workingPath =
+				PathComponents[PathComponents.Count - 1].Path?.TrimEnd(Path.DirectorySeparatorChar);
+
+			foreach (var childFolder in childFolders)
+			{
+				var isPathItemFocused = childFolder.Item.Name == nextPathItemTitle;
+
+				var flyoutItem = new MenuFlyoutItem
+				{
+					Icon = new FontIcon
+					{
+						Glyph = "\uED25",
+						FontWeight = isPathItemFocused ? boldFontWeight : normalFontWeight
+					},
+					Text = childFolder.Item.Name,
+					FontSize = 12,
+					FontWeight = isPathItemFocused ? boldFontWeight : normalFontWeight
+				};
+
+				if (workingPath != childFolder.Path)
+				{
+					flyoutItem.Click += (sender, args) =>
+					{
+						// Navigate to the directory
+						shellPage.NavigateToPath(childFolder.Path);
+					};
+				}
+
+				flyout.Items?.Add(flyoutItem);
+			}
+		}
+
+		private static string NormalizePathInput(string currentInput, bool isFtp)
+		{
+			if (currentInput.Contains('/') && !isFtp)
+				currentInput = currentInput.Replace("/", "\\", StringComparison.Ordinal);
+
+			currentInput = currentInput.Replace("\\\\", "\\", StringComparison.Ordinal);
+
+			if (currentInput.StartsWith('\\') && !currentInput.StartsWith("\\\\", StringComparison.Ordinal))
+				currentInput = currentInput.Insert(0, "\\");
+
+			return currentInput;
+		}
+
 		public async Task CheckPathInputAsync(string currentInput, string currentSelectedPath, IShellPage shellPage)
 		{
 			if (currentInput.StartsWith('>'))
@@ -484,13 +611,7 @@ namespace Files.App.ViewModels.UserControls
 
 			var isFtp = FtpHelpers.IsFtpPath(currentInput);
 
-			if (currentInput.Contains('/') && !isFtp)
-				currentInput = currentInput.Replace("/", "\\", StringComparison.Ordinal);
-
-			currentInput = currentInput.Replace("\\\\", "\\", StringComparison.Ordinal);
-
-			if (currentInput.StartsWith('\\') && !currentInput.StartsWith("\\\\", StringComparison.Ordinal))
-				currentInput = currentInput.Insert(0, "\\");
+			currentInput = NormalizePathInput(currentInput, isFtp);
 
 			if (currentSelectedPath == currentInput || string.IsNullOrWhiteSpace(currentInput))
 				return;
@@ -499,6 +620,7 @@ namespace Files.App.ViewModels.UserControls
 			{
 				if (currentInput.Equals("Home", StringComparison.OrdinalIgnoreCase) || currentInput.Equals("Home".GetLocalizedResource(), StringComparison.OrdinalIgnoreCase))
 				{
+					SavePathToHistory("Home");
 					shellPage.NavigateHome();
 				}
 				else
@@ -524,10 +646,12 @@ namespace Files.App.ViewModels.UserControls
 							return;
 						}
 						var pathToNavigate = resFolder.Result?.Path ?? currentInput;
+						SavePathToHistory(pathToNavigate);
 						shellPage.NavigateToPath(pathToNavigate);
 					}
 					else if (isFtp)
 					{
+						SavePathToHistory(currentInput);
 						shellPage.NavigateToPath(currentInput);
 					}
 					else // Not a folder or inaccessible
@@ -568,6 +692,18 @@ namespace Files.App.ViewModels.UserControls
 			}
 		}
 
+		private void SavePathToHistory(string path)
+		{
+			var pathHistoryList = UserSettingsService.GeneralSettingsService.PathHistoryList?.ToList() ?? new List<string>();
+			pathHistoryList.Remove(path);
+			pathHistoryList.Insert(0, path);
+
+			if (pathHistoryList.Count > MAX_SUGGESTIONS)
+				UserSettingsService.GeneralSettingsService.PathHistoryList = pathHistoryList.RemoveFrom(MAX_SUGGESTIONS + 1);
+			else
+				UserSettingsService.GeneralSettingsService.PathHistoryList = pathHistoryList;
+		}
+
 		private static async Task<bool> LaunchApplicationFromPath(string currentInput, string workingDir)
 		{
 			var trimmedInput = currentInput.Trim();
@@ -583,9 +719,9 @@ namespace Files.App.ViewModels.UserControls
 			return await LaunchHelper.LaunchAppAsync(fileName, arguments, workingDir);
 		}
 
-		public async Task SetAddressBarSuggestionsAsync(AutoSuggestBox sender, IShellPage shellpage, int maxSuggestions = 7)
+		public async Task SetAddressBarSuggestionsAsync(AutoSuggestBox sender, IShellPage shellpage)
 		{
-			if (!string.IsNullOrWhiteSpace(sender.Text) && shellpage.FilesystemViewModel is not null)
+			if (sender.Text is not null && shellpage.FilesystemViewModel is not null)
 			{
 				if (!await SafetyExtensions.IgnoreExceptions(async () =>
 				{
@@ -609,36 +745,55 @@ namespace Files.App.ViewModels.UserControls
 					else
 					{
 						IsCommandPaletteOpen = false;
-						var isFtp = FtpHelpers.IsFtpPath(sender.Text);
-						var expandedPath = StorageFileExtensions.GetResolvedPath(sender.Text, isFtp);
-						var folderPath = PathNormalization.GetParentDir(expandedPath) ?? expandedPath;
-						StorageFolderWithPath folder = await shellpage.FilesystemViewModel.GetFolderWithPathFromPathAsync(folderPath);
+						var currentInput = sender.Text;
 
-						if (folder is null)
-							return false;
-
-						var currPath = await folder.GetFoldersWithPathAsync(Path.GetFileName(expandedPath), (uint)maxSuggestions);
-						if (currPath.Count >= maxSuggestions)
+						if (string.IsNullOrWhiteSpace(currentInput) || currentInput == "Home")
 						{
-							suggestions = currPath.Select(x => new NavigationBarSuggestionItem()
+							// Load previously entered path
+							var pathHistoryList = UserSettingsService.GeneralSettingsService.PathHistoryList;
+							if (pathHistoryList is not null)
 							{
-								Text = x.Path,
-								PrimaryDisplay = x.Item.DisplayName
-							}).ToList();
+								suggestions = pathHistoryList.Select(x => new NavigationBarSuggestionItem()
+								{
+									Text = x,
+									PrimaryDisplay = x
+								}).ToList();
+							}
 						}
-						else if (currPath.Any())
+						else
 						{
-							var subPath = await currPath.First().GetFoldersWithPathAsync((uint)(maxSuggestions - currPath.Count));
-							suggestions = currPath.Select(x => new NavigationBarSuggestionItem()
+							var isFtp = FtpHelpers.IsFtpPath(currentInput);
+							currentInput = NormalizePathInput(currentInput, isFtp);
+							var expandedPath = StorageFileExtensions.GetResolvedPath(currentInput, isFtp);
+							var folderPath = PathNormalization.GetParentDir(expandedPath) ?? expandedPath;
+							StorageFolderWithPath folder = await shellpage.FilesystemViewModel.GetFolderWithPathFromPathAsync(folderPath);
+
+							if (folder is null)
+								return false;
+
+							var currPath = await folder.GetFoldersWithPathAsync(Path.GetFileName(expandedPath), (uint)MAX_SUGGESTIONS);
+							if (currPath.Count >= MAX_SUGGESTIONS)
 							{
-								Text = x.Path,
-								PrimaryDisplay = x.Item.DisplayName
-							}).Concat(
-								subPath.Select(x => new NavigationBarSuggestionItem()
+								suggestions = currPath.Select(x => new NavigationBarSuggestionItem()
 								{
 									Text = x.Path,
-									PrimaryDisplay = PathNormalization.Combine(currPath.First().Item.DisplayName, x.Item.DisplayName)
-								})).ToList();
+									PrimaryDisplay = x.Item.DisplayName
+								}).ToList();
+							}
+							else if (currPath.Any())
+							{
+								var subPath = await currPath.First().GetFoldersWithPathAsync((uint)(MAX_SUGGESTIONS - currPath.Count));
+								suggestions = currPath.Select(x => new NavigationBarSuggestionItem()
+								{
+									Text = x.Path,
+									PrimaryDisplay = x.Item.DisplayName
+								}).Concat(
+									subPath.Select(x => new NavigationBarSuggestionItem()
+									{
+										Text = x.Path,
+										PrimaryDisplay = PathNormalization.Combine(currPath.First().Item.DisplayName, x.Item.DisplayName)
+									})).ToList();
+							}
 						}
 					}
 
@@ -705,9 +860,9 @@ namespace Files.App.ViewModels.UserControls
 		{
 			switch (e.PropertyName)
 			{
-				case nameof(FolderSettingsViewModel.GridViewSize):
-				case nameof(FolderSettingsViewModel.LayoutMode):
-					LayoutOpacityIcon = _InstanceViewModel.FolderSettings.LayoutMode switch
+				case nameof(LayoutPreferencesManager.GridViewSize):
+				case nameof(LayoutPreferencesManager.LayoutMode):
+					LayoutOpacityIcon = instanceViewModel.FolderSettings.LayoutMode switch
 					{
 						FolderLayoutModes.TilesView => Commands.LayoutTiles.OpacityStyle!,
 						FolderLayoutModes.ColumnView => Commands.LayoutColumns.OpacityStyle!,

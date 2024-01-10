@@ -12,16 +12,18 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
-using System.Runtime.CompilerServices;
+using System.Data;
 using Windows.ApplicationModel;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation.Metadata;
+using Windows.Graphics;
 using Windows.Services.Store;
 using WinRT.Interop;
 using VirtualKey = Windows.System.VirtualKey;
 
 namespace Files.App.Views
 {
-	public sealed partial class MainPage : Page, INotifyPropertyChanged
+	public sealed partial class MainPage : Page
 	{
 		// Dependency injection
 
@@ -50,6 +52,7 @@ namespace Files.App.Views
 			if (FilePropertiesHelpers.FlowDirectionSettingIsRightToLeft)
 				FlowDirection = FlowDirection.RightToLeft;
 
+			ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 			UserSettingsService.OnSettingChangedEvent += UserSettingsService_OnSettingChangedEvent;
 
 			_updateDateDisplayTimer = DispatcherQueue.CreateTimer();
@@ -104,6 +107,15 @@ namespace Files.App.Views
 				UserSettingsService.ApplicationSettingsService.ShowRunningAsAdminPrompt = false;
 		}
 
+		// WINUI3
+		private ContentDialog SetContentDialogRoot(ContentDialog contentDialog)
+		{
+			if (ApiInformation.IsApiContractPresent("Windows.Foundation.UniversalApiContract", 8))
+				contentDialog.XamlRoot = MainWindow.Instance.Content.XamlRoot;
+
+			return contentDialog;
+		}
+
 		private void UserSettingsService_OnSettingChangedEvent(object? sender, SettingChangedEventArgs e)
 		{
 			switch (e.SettingName)
@@ -116,9 +128,8 @@ namespace Files.App.Views
 
 		private void HorizontalMultitaskingControl_Loaded(object sender, RoutedEventArgs e)
 		{
-			TabControl.DragArea.SizeChanged += (_, _) => SetRectDragRegion();
-
-			if (ViewModel.MultitaskingControl is not UserControls.TabBar.TabBar)
+			TabControl.DragArea.SizeChanged += (_, _) => MainWindow.Instance.RaiseSetTitleBarDragRegion(SetTitleBarDragRegion);
+			if (ViewModel.MultitaskingControl is not TabBar)
 			{
 				ViewModel.MultitaskingControl = TabControl;
 				ViewModel.MultitaskingControls.Add(TabControl);
@@ -126,11 +137,11 @@ namespace Files.App.Views
 			}
 		}
 
-		private void SetRectDragRegion()
+		private int SetTitleBarDragRegion(InputNonClientPointerSource source, SizeInt32 size, double scaleFactor, Func<UIElement, RectInt32?, RectInt32> getScaledRect)
 		{
-			DragZoneHelper.SetDragZones(
-				MainWindow.Instance,
-				dragZoneLeftIndent: (int)(TabControl.ActualWidth + TabControl.Margin.Left - TabControl.DragArea.ActualWidth));
+			var height = (int)TabControl.ActualHeight;
+			source.SetRegionRects(NonClientRegionKind.Passthrough, [getScaledRect(this, new RectInt32(0, 0, (int)(TabControl.ActualWidth + TabControl.Margin.Left - TabControl.DragArea.ActualWidth), height))]);
+			return height;
 		}
 
 		public async void TabItemContent_ContentChanged(object? sender, CustomTabViewItemParameter e)
@@ -140,12 +151,12 @@ namespace Files.App.Views
 
 			var paneArgs = e.NavigationParameter as PaneNavigationArguments;
 			SidebarAdaptiveViewModel.UpdateSidebarSelectedItemFromArgs(SidebarAdaptiveViewModel.PaneHolder.IsLeftPaneActive ?
-				paneArgs.LeftPaneNavPathParam : paneArgs.RightPaneNavPathParam);
+				paneArgs?.LeftPaneNavPathParam : paneArgs?.RightPaneNavPathParam);
 
 			UpdateStatusBarProperties();
 			LoadPaneChanged();
 			UpdateNavToolbarProperties();
-			await ViewModel.UpdateInstancePropertiesAsync(paneArgs);
+			await NavigationHelpers.UpdateInstancePropertiesAsync(paneArgs);
 		}
 
 		public void MultitaskingControl_CurrentInstanceChanged(object? sender, CurrentInstanceChangedEventArgs e)
@@ -154,9 +165,12 @@ namespace Files.App.Views
 				SidebarAdaptiveViewModel.PaneHolder.PropertyChanged -= PaneHolder_PropertyChanged;
 
 			var navArgs = e.CurrentInstance.TabItemParameter?.NavigationParameter;
-			SidebarAdaptiveViewModel.PaneHolder = e.CurrentInstance as IPaneHolder;
-			SidebarAdaptiveViewModel.PaneHolder.PropertyChanged += PaneHolder_PropertyChanged;
-			SidebarAdaptiveViewModel.NotifyInstanceRelatedPropertiesChanged((navArgs as PaneNavigationArguments).LeftPaneNavPathParam);
+			if (e.CurrentInstance is IPaneHolder currentInstance)
+			{
+				SidebarAdaptiveViewModel.PaneHolder = currentInstance;
+				SidebarAdaptiveViewModel.PaneHolder.PropertyChanged += PaneHolder_PropertyChanged;
+			}
+			SidebarAdaptiveViewModel.NotifyInstanceRelatedPropertiesChanged((navArgs as PaneNavigationArguments)?.LeftPaneNavPathParam);
 
 			if (SidebarAdaptiveViewModel.PaneHolder?.ActivePaneOrColumn.SlimContentPage?.DirectoryPropertiesViewModel is not null)
 				SidebarAdaptiveViewModel.PaneHolder.ActivePaneOrColumn.SlimContentPage.DirectoryPropertiesViewModel.ShowLocals = true;
@@ -164,12 +178,10 @@ namespace Files.App.Views
 			UpdateStatusBarProperties();
 			UpdateNavToolbarProperties();
 			LoadPaneChanged();
-			ViewModel.UpdateInstancePropertiesAsync(navArgs);
+			NavigationHelpers.UpdateInstancePropertiesAsync(navArgs);
 
 			e.CurrentInstance.ContentChanged -= TabItemContent_ContentChanged;
 			e.CurrentInstance.ContentChanged += TabItemContent_ContentChanged;
-
-			SidebarAdaptiveViewModel.PaneHolder?.ActivePaneOrColumn.SlimContentPage?.ReloadPreviewPane();
 		}
 
 		private void PaneHolder_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -265,6 +277,8 @@ namespace Files.App.Views
 
 		private void Page_Loaded(object sender, RoutedEventArgs e)
 		{
+			MainWindow.Instance.AppWindow.Changed += (_, _) => MainWindow.Instance.RaiseSetTitleBarDragRegion(SetTitleBarDragRegion);
+
 			// Defers the status bar loading until after the page has loaded to improve startup perf
 			FindName(nameof(StatusBarControl));
 			FindName(nameof(InnerNavigationToolbar));
@@ -308,7 +322,8 @@ namespace Files.App.Views
 
 		private void UpdateDateDisplayTimer_Tick(object sender, object e)
 		{
-			PreviewPane?.ViewModel.UpdateDateDisplay();
+			if (!App.AppModel.IsMainWindowClosed)
+				PreviewPane?.ViewModel.UpdateDateDisplay();
 		}
 
 		private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -340,7 +355,7 @@ namespace Files.App.Views
 		/// </summary>
 		private void UpdatePositioning()
 		{
-			if (PreviewPane is null || !ShouldPreviewPaneBeActive)
+			if (PreviewPane is null || !ViewModel.ShouldPreviewPaneBeActive)
 			{
 				PaneRow.MinHeight = 0;
 				PaneRow.MaxHeight = double.MaxValue;
@@ -411,33 +426,23 @@ namespace Files.App.Views
 			this.ChangeCursor(InputSystemCursor.Create(InputSystemCursorShape.Arrow));
 		}
 
-		public bool ShouldPreviewPaneBeActive => UserSettingsService.InfoPaneSettingsService.IsEnabled && ShouldPreviewPaneBeDisplayed;
-
-		public bool ShouldPreviewPaneBeDisplayed
-		{
-			get
-			{
-				var isHomePage = !(SidebarAdaptiveViewModel.PaneHolder?.ActivePane?.InstanceViewModel?.IsPageTypeNotHome ?? false);
-				var isMultiPane = SidebarAdaptiveViewModel.PaneHolder?.IsMultiPaneActive ?? false;
-				var isBigEnough = MainWindow.Instance.Bounds.Width > 450 && MainWindow.Instance.Bounds.Height > 450 || RootGrid.ActualWidth > 700 && MainWindow.Instance.Bounds.Height > 360;
-				var isEnabled = (!isHomePage || isMultiPane) && isBigEnough;
-
-				return isEnabled;
-			}
-		}
-
 		private void LoadPaneChanged()
 		{
-			OnPropertyChanged(nameof(ShouldPreviewPaneBeActive));
-			OnPropertyChanged(nameof(ShouldPreviewPaneBeDisplayed));
+			var isHomePage = !(SidebarAdaptiveViewModel.PaneHolder?.ActivePane?.InstanceViewModel?.IsPageTypeNotHome ?? false);
+			var isMultiPane = SidebarAdaptiveViewModel.PaneHolder?.IsMultiPaneActive ?? false;
+			var isBigEnough = MainWindow.Instance.Bounds.Width > 450 && MainWindow.Instance.Bounds.Height > 450 || RootGrid.ActualWidth > 700 && MainWindow.Instance.Bounds.Height > 360;
+
+			ViewModel.ShouldPreviewPaneBeDisplayed = (!isHomePage || isMultiPane) && isBigEnough;
+			ViewModel.ShouldPreviewPaneBeActive = UserSettingsService.InfoPaneSettingsService.IsEnabled && ViewModel.ShouldPreviewPaneBeDisplayed;
+			ViewModel.ShouldViewControlBeDisplayed = SidebarAdaptiveViewModel.PaneHolder?.ActivePane?.InstanceViewModel?.IsPageTypeNotHome ?? false;
+
 			UpdatePositioning();
 		}
 
-		public event PropertyChangedEventHandler? PropertyChanged;
-
-		private void OnPropertyChanged([CallerMemberName] string propertyName = "")
+		private async void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
 		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+			if (e.PropertyName == nameof(ViewModel.ShouldPreviewPaneBeActive) && ViewModel.ShouldPreviewPaneBeActive)
+				await Ioc.Default.GetRequiredService<InfoPaneViewModel>().UpdateSelectedItemPreviewAsync();
 		}
 
 		private void RootGrid_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
@@ -459,6 +464,64 @@ namespace Files.App.Views
 						Focus(FocusState.Keyboard);
 					break;
 			}
+		}
+
+		private bool lockFlag = false;
+		//private string[] dropableArchiveTypes = { "zip", "rar", "7z", "tar" };
+
+		private async void HorizontalMultitaskingControlAddButton_Drop(object sender, DragEventArgs e)
+		{
+			if (lockFlag || !FilesystemHelpers.HasDraggedStorageItems(e.DataView))
+				return;
+
+			lockFlag = true;
+
+			var items = (await FilesystemHelpers.GetDraggedStorageItems(e.DataView))
+				.Where(x => x.ItemType is FilesystemItemType.Directory
+				//|| dropableArchiveTypes.Contains(x.Name.Split('.').Last().ToLower())
+				);
+
+			var deferral = e.GetDeferral();
+			try
+			{
+				foreach (var item in items)
+					await NavigationHelpers.OpenPathInNewTab(item.Path);
+
+				deferral.Complete();
+			}
+			catch { }
+			lockFlag = false;
+		}
+
+		private async void HorizontalMultitaskingControlAddButton_DragOver(object sender, DragEventArgs e)
+		{
+			if (!FilesystemHelpers.HasDraggedStorageItems(e.DataView))
+			{
+				e.AcceptedOperation = DataPackageOperation.None;
+				return;
+			}
+
+			bool hasValidDraggedItems =
+				(await FilesystemHelpers.GetDraggedStorageItems(e.DataView)).Any(x => x.ItemType is FilesystemItemType.Directory
+				//|| dropableArchiveTypes.Contains(x.Name.Split('.').Last().ToLower())
+				);
+
+			if (!hasValidDraggedItems)
+			{
+				e.AcceptedOperation = DataPackageOperation.None;
+				return;
+			}
+
+			try
+			{
+				e.Handled = true;
+				var deferral = e.GetDeferral();
+				e.DragUIOverride.IsCaptionVisible = true;
+				e.DragUIOverride.Caption = string.Format("OpenInNewTab".GetLocalizedResource());
+				e.AcceptedOperation = DataPackageOperation.Link;
+				deferral.Complete();
+			}
+			catch { }
 		}
 
 		private void NavToolbar_Loaded(object sender, RoutedEventArgs e) => UpdateNavToolbarProperties();

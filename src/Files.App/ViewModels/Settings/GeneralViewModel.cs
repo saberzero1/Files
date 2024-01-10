@@ -116,7 +116,7 @@ namespace Files.App.ViewModels.Settings
 		private async void DoRestartAsync()
 		{
 			UserSettingsService.AppSettingsService.RestoreTabsOnStartup = true; // Tells the app to restore tabs when it's next launched
-			App.SaveSessionTabs(); // Saves the open tabs
+			AppLifecycleHelper.SaveSessionTabs(); // Saves the open tabs
 			await Launcher.LaunchUriAsync(new Uri("files-uwp:")); // Launches a new instance of Files
 			Process.GetCurrentProcess().Kill(); // Closes the current instance
 		}
@@ -247,6 +247,48 @@ namespace Files.App.ViewModels.Settings
 				if (value != UserSettingsService.GeneralSettingsService.ShowOpenInNewPane)
 				{
 					UserSettingsService.GeneralSettingsService.ShowOpenInNewPane = value;
+
+					OnPropertyChanged();
+				}
+			}
+		}
+
+		public bool ShowCreateFolderWithSelection
+		{
+			get => UserSettingsService.GeneralSettingsService.ShowCreateFolderWithSelection;
+			set
+			{
+				if (value != UserSettingsService.GeneralSettingsService.ShowCreateFolderWithSelection)
+				{
+					UserSettingsService.GeneralSettingsService.ShowCreateFolderWithSelection = value;
+
+					OnPropertyChanged();
+				}
+			}
+		}
+
+		public bool ShowCopyPath
+		{
+			get => UserSettingsService.GeneralSettingsService.ShowCopyPath;
+			set
+			{
+				if (value != UserSettingsService.GeneralSettingsService.ShowCopyPath)
+				{
+					UserSettingsService.GeneralSettingsService.ShowCopyPath = value;
+
+					OnPropertyChanged();
+				}
+			}
+		}
+
+		public bool ShowCreateShortcut
+		{
+			get => UserSettingsService.GeneralSettingsService.ShowCreateShortcut;
+			set
+			{
+				if (value != UserSettingsService.GeneralSettingsService.ShowCreateShortcut)
+				{
+					UserSettingsService.GeneralSettingsService.ShowCreateShortcut = value;
 
 					OnPropertyChanged();
 				}
@@ -420,6 +462,19 @@ namespace Files.App.ViewModels.Settings
 					UserSettingsService.GeneralSettingsService.ShowOpenInNewTab = value;
 					OnPropertyChanged();
 				}
+			}
+		}
+
+		public bool ShowCompressionOptions
+		{
+			get => UserSettingsService.GeneralSettingsService.ShowCompressionOptions;
+			set
+			{
+				if (value == UserSettingsService.GeneralSettingsService.ShowCompressionOptions)
+					return;
+
+				UserSettingsService.GeneralSettingsService.ShowCompressionOptions = value;
+				OnPropertyChanged();
 			}
 		}
 

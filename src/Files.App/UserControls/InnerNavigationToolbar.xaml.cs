@@ -27,7 +27,7 @@ namespace Files.App.UserControls
 
 		public AppModel AppModel => App.AppModel;
 
-		public AddressToolbarViewModel ViewModel
+		public ToolbarViewModel? ViewModel
 		{
 			get => (AddressToolbarViewModel)GetValue(ViewModelProperty);
 			set => SetValue(ViewModelProperty, value);

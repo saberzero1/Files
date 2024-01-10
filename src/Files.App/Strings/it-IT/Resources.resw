@@ -123,6 +123,9 @@
   <data name="CopyPath" xml:space="preserve">
     <value>Copia percorso</value>
   </data>
+  <data name="CopyPathWithQuotes" xml:space="preserve">
+    <value>Copia percorso con virgolette</value>
+  </data>
   <data name="Browse" xml:space="preserve">
     <value>Esplora</value>
   </data>
@@ -975,9 +978,6 @@
   <data name="SearchPagePathBoxOverrideText" xml:space="preserve">
     <value>Cerca risultati in {1} per {0}</value>
   </data>
-  <data name="SettingsListAndSortDirectoriesAlongsideFiles" xml:space="preserve">
-    <value>Ordina le cartelle insieme ai file</value>
-  </data>
   <data name="Details" xml:space="preserve">
     <value>Dettagli</value>
   </data>
@@ -1063,7 +1063,7 @@
     <value>Commuta il riquadro informazioni</value>
   </data>
   <data name="ToggleInfoPaneDescription" xml:space="preserve">
-    <value>Commuta il riquadro informazioni per visualizzare i riquadri dettaglio\anteprima</value>
+    <value>Commuta il riquadro informazioni per visualizzare i riquadri dettaglio/anteprima</value>
   </data>
   <data name="DetailsPanePreviewNotAvaliableText" xml:space="preserve">
     <value>Anteprima non disponibile</value>
@@ -1320,17 +1320,11 @@
   <data name="Sort" xml:space="preserve">
     <value>Ordina</value>
   </data>
-  <data name="NavToolbarGroupByRadioButtons.Text" xml:space="preserve">
-    <value>Raggruppa per</value>
-  </data>
   <data name="DateModifiedLowerCase" xml:space="preserve">
     <value>Data modifica</value>
   </data>
   <data name="OriginalFolder" xml:space="preserve">
     <value>Cartella originale</value>
-  </data>
-  <data name="NavToolbarSortByRadioButtons.Text" xml:space="preserve">
-    <value>Ordina per</value>
   </data>
   <data name="Descending" xml:space="preserve">
     <value>Decrescente</value>
@@ -2235,6 +2229,9 @@
   <data name="ShowEditTagsMenu" xml:space="preserve">
     <value>Mostra il menù per la modifica dei tag</value>
   </data>
+  <data name="ShowCompressionOptions" xml:space="preserve">
+    <value>Mostra opzioni di compressione</value>
+  </data>
   <data name="ShowSendToMenu" xml:space="preserve">
     <value>Mostra il menù Invia A</value>
   </data>
@@ -2340,6 +2337,9 @@
   <data name="CalculationError" xml:space="preserve">
     <value>Si è verificato un errore durante il calcolo</value>
   </data>
+  <data name="CalculationErrorFileIsOpen" xml:space="preserve">
+    <value>Impossibile calcolare l'hash, chiudi il file e riprova.</value>
+  </data>
   <data name="CalculationOnlineFileHashError" xml:space="preserve">
     <value>Gli hash non sono disponibili per i file online</value>
   </data>
@@ -2416,7 +2416,10 @@
     <value>Copia gli elementi negli appunti</value>
   </data>
   <data name="CopyPathDescription" xml:space="preserve">
-    <value>Copia il percorso negli appunti</value>
+    <value>Copia il percorso degli elementi selezionati negli appunti</value>
+  </data>
+  <data name="CopyPathWithQuotesDescription" xml:space="preserve">
+    <value>Copia il percorso degli elementi selezionati con virgolette negli appunti</value>
   </data>
   <data name="CutItemDescription" xml:space="preserve">
     <value>Taglia gli elementi negli appunti</value>
@@ -2618,9 +2621,6 @@
   </data>
   <data name="ToggleSortDirectionDescription" xml:space="preserve">
     <value>Inverti direzione di ordinamento degli elementi</value>
-  </data>
-  <data name="ToggleSortDirectoriesAlongsideFilesDescription" xml:space="preserve">
-    <value>Elenca e ordina le cartelle insieme ai file</value>
   </data>
   <data name="GroupByNoneDescription" xml:space="preserve">
     <value>Elenca gli elementi senza raggruppamento</value>
@@ -3001,6 +3001,9 @@
   <data name="Month" xml:space="preserve">
     <value>Mese</value>
   </data>
+  <data name="Day" xml:space="preserve">
+    <value>Giorno</value>
+  </data>
   <data name="ToggleGroupByDateUnitDescription" xml:space="preserve">
     <value>Alterna il campo di raggruppamento per data</value>
   </data>
@@ -3010,8 +3013,11 @@
   <data name="Year" xml:space="preserve">
     <value>Anno</value>
   </data>
-  <data name="GroupByMonthInsteadOfYear" xml:space="preserve">
-    <value>Raggruppa per mese anziché per anno</value>
+  <data name="GroupByDateUnit" xml:space="preserve">
+    <value>Unità di raggruppamento per data</value>
+  </data>
+  <data name="GroupByDateCreatedDayDescription" xml:space="preserve">
+    <value>Raggruppa gli elementi per il giorno della data di creazione</value>
   </data>
   <data name="GroupByDateCreatedMonthDescription" xml:space="preserve">
     <value>Raggruppa gli elementi per il mese della data di creazione</value>
@@ -3019,11 +3025,17 @@
   <data name="GroupByDateCreatedYearDescription" xml:space="preserve">
     <value>Raggruppa gli elementi per l'anno della data di creazione</value>
   </data>
+    <data name="GroupByDateDeletedDayDescription" xml:space="preserve">
+    <value>Raggruppa gli elementi per il giorno della data di eliminazione</value>
+  </data>
   <data name="GroupByDateDeletedMonthDescription" xml:space="preserve">
     <value>Raggruppa gli elementi per il mese della data di eliminazione</value>
   </data>
   <data name="GroupByDateDeletedYearDescription" xml:space="preserve">
     <value>Raggruppa gli elementi per l'anno della data di eliminazione</value>
+  </data>
+  <data name="GroupByDateModifiedDayDescription" xml:space="preserve">
+    <value>Raggruppa gli elementi per il giorno della data di modifica</value>
   </data>
   <data name="GroupByDateModifiedMonthDescription" xml:space="preserve">
     <value>Raggruppa gli elementi per il mese della data di modifica</value>
@@ -3222,7 +3234,7 @@
     <value>Inizializza repo</value>
   </data>
   <data name="InitRepoDescription" xml:space="preserve">
-    <value>Inizializza una repository git</value>
+    <value>Inizializza una repository Git</value>
   </data>
   <data name="GitOriginRepositoryName" xml:space="preserve">
     <value>Nome Repository Remoto</value>
@@ -3292,7 +3304,7 @@
     <value>Non mostrare più</value>
   </data>
   <data name="FilesRunningAsAdmin" xml:space="preserve">
-    <value>File in esecuzione come amministratore</value>
+    <value>Files è in esecuzione come amministratore</value>
   </data>
   <data name="FilesRunningAsAdminContent" xml:space="preserve">
     <value>A causa delle limitazioni della piattaforma, il drag and drop non è disponibile quando si esegue Files come amministratore.</value>
@@ -3501,23 +3513,23 @@
     <comment>Shown in a StatusCenter card.</comment>
   </data>
   <data name="StatusCenter_DeleteCanceled_Header" xml:space="preserve">
-    <value>Annullata cancellazione di {0} elemento/i da "{1}"</value>
+    <value>Annullata eliminazione permanente di {0} elemento/i da "{1}"</value>
     <comment>Shown in a StatusCenter card.</comment>
   </data>
   <data name="StatusCenter_DeleteComplete_Header" xml:space="preserve">
-    <value>Cancellati {0} elemento/i da "{1}"</value>
+    <value>Eliminato/i permanentemente {0} elemento/i da "{1}"</value>
     <comment>Shown in a StatusCenter card.</comment>
   </data>
   <data name="StatusCenter_DeleteFailed_Header" xml:space="preserve">
-    <value>Errore nella cancellazione di {0} elemento/i da "{1}"</value>
+    <value>Errore nell'eliminazione permanente di {0} elemento/i da "{1}"</value>
     <comment>Shown in a StatusCenter card.</comment>
   </data>
   <data name="StatusCenter_DeleteFailed_SubHeader" xml:space="preserve">
-    <value>Errore nella cancellazione di {0} elemento/i da "{1}"</value>
+    <value>Errore nell'eliminazione permanente di {0} elemento/i da "{1}"</value>
     <comment>Shown in a StatusCenter card.</comment>
   </data>
   <data name="StatusCenter_DeleteInProgress_Header" xml:space="preserve">
-    <value>Cancellazione di {0} elemento/i da "{1}" in corso</value>
+    <value>Eliminazione permanente di {0} elemento/i da "{1}" in corso</value>
     <comment>Shown in a StatusCenter card.</comment>
   </data>
   <data name="StatusCenter_RecycleCanceled_Header" xml:space="preserve">
@@ -3607,5 +3619,71 @@
   </data>
   <data name="FailedToRestore" xml:space="preserve">
     <value>Recupero degli oggetti dal Cestino non riuscito</value>
+  </data>
+  <data name="FailedToSetBackground" xml:space="preserve">
+    <value>Impossibile impostare lo sfondo</value>
+  </data>
+  <data name="GitDeleteBranch" xml:space="preserve">
+    <value>Elimina il branch di Git</value>
+  </data>
+  <data name="GitDeleteBranchSubtitle" xml:space="preserve">
+    <value>Sei sicuro/a di voler eliminare permanentemente il branch "{0}"?</value>
+  </data>
+  <data name="ConnectedToGitHub" xml:space="preserve">
+    <value>Connesso a GitHub</value>
+  </data>
+  <data name="Logout" xml:space="preserve">
+    <value>Disconnettiti</value>
+  </data>
+  <data name="ConnectToGitHub" xml:space="preserve">
+    <value>Connettiti a GitHub</value>
+  </data>
+  <data name="Login" xml:space="preserve">
+    <value>Accedi</value>
+  </data>
+  <data name="ErrorApplyingTagContent" xml:space="preserve">
+    <value>Le etichette sono attualmente compatibili solo sulle unità formattate come NTFS.</value>
+  </data>
+  <data name="ErrorApplyingTagTitle" xml:space="preserve">
+    <value>Si è verificato un errore durante l'applicazione di quest'etichetta</value>
+  </data>
+  <data name="DecompressArchiveHereSmartDescription" xml:space="preserve">
+    <value>Estrae gli elementi dall'archivio/dagli archivi selezionato/i nella cartella corrente per gli archivi con un singolo elemento o in una nuova cartella per quelli con più elementi</value>
+  </data>
+  <data name="ExtractHereSmart" xml:space="preserve">
+    <value>Estrai qui (Smart)</value>
+  </data>
+  <data name="SortFilesAndFoldersTogether" xml:space="preserve">
+    <value>Ordina file e cartelle insieme</value>
+  </data>
+  <data name="SortFilesAndFoldersTogetherDescription" xml:space="preserve">
+    <value>Ordina file e cartelle insieme</value>
+  </data>
+  <data name="SortFilesFirst" xml:space="preserve">
+    <value>Ordina prima i file</value>
+  </data>
+  <data name="SortFilesFirstDescription" xml:space="preserve">
+    <value>Ordina prima i file e poi le cartelle</value>
+  </data>
+  <data name="SortFoldersFirst" xml:space="preserve">
+    <value>Ordina prima le cartelle</value>
+  </data>
+  <data name="SortFoldersFirstDescription" xml:space="preserve">
+    <value>Ordina prima le cartelle e poi i file</value>
+  </data>
+  <data name="SortPriority" xml:space="preserve">
+    <value>Priorità di ordinamento</value>
+  </data>
+  <data name="FailedToRotateImage" xml:space="preserve">
+    <value>Rotazione dell'immagine fallita</value>
+  </data>
+  <data name="Restart" xml:space="preserve">
+    <value>Riavvia</value>
+  </data>
+  <data name="Quit" xml:space="preserve">
+    <value>Esci</value>
+  </data>
+  <data name="FaildToShareItems" xml:space="preserve">
+    <value>Impossibile condividere gli elementi</value>
   </data>
 </root>

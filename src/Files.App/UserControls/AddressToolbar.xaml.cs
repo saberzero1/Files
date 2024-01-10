@@ -57,13 +57,8 @@ namespace Files.App.UserControls
 		}
 
 		public static readonly DependencyProperty ViewModelProperty =
-			DependencyProperty.Register(
-				nameof(ViewModel),
-				typeof(AddressToolbarViewModel),
-				typeof(AddressToolbar),
-				new PropertyMetadata(null));
-
-		public AddressToolbarViewModel ViewModel
+			DependencyProperty.Register(nameof(ViewModel), typeof(ToolbarViewModel), typeof(AddressToolbar), new PropertyMetadata(null));
+		public ToolbarViewModel? ViewModel
 		{
 			get => (AddressToolbarViewModel)GetValue(ViewModelProperty);
 			set => SetValue(ViewModelProperty, value);
@@ -116,7 +111,10 @@ namespace Files.App.UserControls
 
 		private void VisiblePath_LostFocus(object _, RoutedEventArgs e)
 		{
-			var element = FocusManager.GetFocusedElement(XamlRoot);
+			if (App.AppModel.IsMainWindowClosed)
+				return;
+
+			var element = FocusManager.GetFocusedElement(MainWindow.Instance.Content.XamlRoot);
 			if (element is FlyoutBase or AppBarButton or Popup)
 				return;
 

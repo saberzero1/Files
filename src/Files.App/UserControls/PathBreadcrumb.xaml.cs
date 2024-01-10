@@ -53,26 +53,5 @@ namespace Files.App.UserControls
 		{
 			ViewModel.PathBreadcrumbItem_PointerPressed(sender, e);
 		}
-
-		private void PathBreadcrumbItemChevron_Loaded(object sender, RoutedEventArgs e)
-		{
-			if (sender is not FontIcon pathSeparatorIcon)
-				return;
-
-			pathSeparatorIcon.Tapped += (s, e) =>
-			{
-				pathSeparatorIcon.ContextFlyout.ShowAt(pathSeparatorIcon);
-			};
-
-			pathSeparatorIcon.ContextFlyout.Opened += (s, e) =>
-			{
-				pathSeparatorIcon.Glyph = "\uE70D";
-			};
-
-			pathSeparatorIcon.ContextFlyout.Closed += (s, e) =>
-			{
-				pathSeparatorIcon.Glyph = "\uE76C";
-			};
-		}
 	}
 }

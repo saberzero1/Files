@@ -30,6 +30,7 @@ namespace Files.App.Data.Commands
 
 		IRichCommand CopyItem { get; }
 		IRichCommand CopyPath { get; }
+		IRichCommand CopyPathWithQuotes { get; }
 		IRichCommand CutItem { get; }
 		IRichCommand PasteItem { get; }
 		IRichCommand PasteItemToSelection { get; }
@@ -80,6 +81,7 @@ namespace Files.App.Data.Commands
 		IRichCommand CompressIntoZip { get; }
 		IRichCommand DecompressArchive { get; }
 		IRichCommand DecompressArchiveHere { get; }
+		IRichCommand DecompressArchiveHereSmart { get; }
 		IRichCommand DecompressArchiveToChildFolder { get; }
 
 		IRichCommand RotateLeft { get; }
@@ -116,7 +118,9 @@ namespace Files.App.Data.Commands
 		IRichCommand SortAscending { get; }
 		IRichCommand SortDescending { get; }
 		IRichCommand ToggleSortDirection { get; }
-		IRichCommand ToggleSortDirectoriesAlongsideFiles { get; }
+		IRichCommand SortFoldersFirst { get; }
+		IRichCommand SortFilesFirst { get; }
+		IRichCommand SortFilesAndFoldersTogether { get; }
 
 		IRichCommand GroupByNone { get; }
 		IRichCommand GroupByName { get; }
@@ -131,10 +135,13 @@ namespace Files.App.Data.Commands
 		IRichCommand GroupByFolderPath { get; }
 		IRichCommand GroupByDateModifiedYear { get; }
 		IRichCommand GroupByDateModifiedMonth { get; }
+		IRichCommand GroupByDateModifiedDay { get; }
 		IRichCommand GroupByDateCreatedYear { get; }
 		IRichCommand GroupByDateCreatedMonth { get; }
+		IRichCommand GroupByDateCreatedDay { get; }
 		IRichCommand GroupByDateDeletedYear { get; }
 		IRichCommand GroupByDateDeletedMonth { get; }
+		IRichCommand GroupByDateDeletedDay { get; }
 		IRichCommand GroupAscending { get; }
 		IRichCommand GroupDescending { get; }
 		IRichCommand ToggleGroupDirection { get; }

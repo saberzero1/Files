@@ -58,9 +58,10 @@ namespace Files.App.UserControls.Widgets
 		public int CompareTo(DriveCardItem? other) => Item.Path.CompareTo(other?.Item?.Path);
 	}
 
-	public sealed partial class DrivesWidget : HomePageWidget, IWidgetItemModel, INotifyPropertyChanged
+	public sealed partial class DrivesWidget : HomePageWidget, IWidgetItem, INotifyPropertyChanged
 	{
 		public IUserSettingsService userSettingsService { get; } = Ioc.Default.GetRequiredService<IUserSettingsService>();
+		private IHomePageContext HomePageContext { get; } = Ioc.Default.GetRequiredService<IHomePageContext>();
 
 		private DrivesViewModel drivesViewModel = Ioc.Default.GetRequiredService<DrivesViewModel>();
 
@@ -294,13 +295,18 @@ namespace Files.App.UserControls.Widgets
 
 		private void OpenProperties(DriveCardItem item)
 		{
+			if (!HomePageContext.IsAnyItemRightClicked)
+				return;
+
+			var flyout = HomePageContext.ItemContextFlyoutMenu;
 			EventHandler<object> flyoutClosed = null!;
-			flyoutClosed = async (s, e) =>
+			flyoutClosed = (s, e) =>
 			{
-				ItemContextMenuFlyout.Closed -= flyoutClosed;
+				flyout!.Closed -= flyoutClosed;
 				FilePropertiesHelpers.OpenPropertiesWindow(item.Item, associatedInstance);
 			};
-			ItemContextMenuFlyout.Closed += flyoutClosed;
+
+			flyout!.Closed += flyoutClosed;
 		}
 
 		private async void Button_Click(object sender, RoutedEventArgs e)
